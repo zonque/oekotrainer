@@ -13,6 +13,8 @@ A live dashboard for the KinoBox pedal-power cinema. Two programs:
   across the top (or bottom) of the screen that shows every rider's power and
   energy on top of a video player. It reads from the `kinobox` server.
 
+![The kinobox dashboard with eight riders, running on the simulator](docs/dashboard.png)
+
 The serial protocol is described in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Build and run

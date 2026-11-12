@@ -1,0 +1,18 @@
+module kinobox
+
+go 1.27.3
+
+require (
+	github.com/BurntSushi/toml v1.6.0
+	github.com/ebitengine/purego v0.11.3
+	github.com/hajimehoshi/ebiten/v2 v2.10.6
+	golang.org/x/image v0.48.0
+	golang.org/x/sys v0.50.0
+)
+
+require (
+	github.com/ebitengine/gomobile v0.0.0-20260820040257-d11f821a26a6 // indirect
+	github.com/ebitengine/hideconsole v1.0.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
+)

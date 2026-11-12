@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KinoBox</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%233987e5' d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgba(11,11,11,0.10);
+  --gen: #2a78d6;
+  --gen-track: #cde2fb;
+  --load: #eb6834;
+  --deficit: #d03b3b;
+  --neutral: #f0efec;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --ring: rgba(255,255,255,0.10);
+    --gen: #3987e5;
+    --gen-track: #184f95;
+    --load: #d95926;
+    --deficit: #e66767;
+    --neutral: #383835;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --ring: rgba(255,255,255,0.10);
+  --gen: #3987e5;
+  --gen-track: #184f95;
+  --load: #d95926;
+  --deficit: #e66767;
+  --neutral: #383835;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 20px 24px 32px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+@media (max-width: 600px) { body { padding: 12px 16px 24px; } }
+
+header {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+h1 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+h1 span { color: var(--muted); font-weight: 400; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--ring);
+  font-size: 13px; color: var(--ink-2);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.live .dot { background: var(--good); animation: pulse 2s infinite; }
+.pill.offline .dot { background: var(--critical); }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pill.live .dot { animation: none; } }
+.spacer { flex: 1; }
+.meta { color: var(--muted); font-size: 13px; }
+button.theme {
+  border: 0; background: var(--surface); color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--ring); border-radius: 8px;
+  padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer;
+}
+
+.grid { display: grid; gap: 16px; margin-bottom: 16px; }
+.hero { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.system { grid-template-columns: 2fr 1fr 2fr; }
+@media (max-width: 1100px) {
+  .hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .system { grid-template-columns: 1fr 1fr; }
+  .system .card:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .hero, .system { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--ring);
+  padding: 16px 18px;
+  min-width: 0;
+}
+.label { color: var(--ink-2); font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.key { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.value { font-size: 44px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.value small { font-size: 18px; font-weight: 500; color: var(--ink-2); margin-left: 4px; letter-spacing: 0; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+/* balance: diverging bar, neutral midpoint */
+.diverge { position: relative; height: 10px; border-radius: 5px; background: var(--neutral); margin-top: 12px; overflow: hidden; }
+.diverge .fill { position: absolute; top: 0; bottom: 0; }
+.ready .diverge .fill { transition: left .4s, width .4s; }
+.diverge .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--surface); }
+
+/* battery meter */
+.meter { position: relative; height: 14px; border-radius: 7px; background: var(--neutral); margin: 14px 0 6px; }
+.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; }
+.ready .meter .fill { transition: width .4s, background .4s; }
+.meter .tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--axis); }
+.scale { position: relative; height: 16px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.scale span { position: absolute; transform: translateX(-50%); }
+
+/* protection chips */
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--ring);
+  font-size: 13px; color: var(--ink-2);
+}
+.chip svg { flex: none; }
+.chip b { color: var(--ink); font-weight: 600; margin-left: auto; }
+.chip.warning { box-shadow: inset 0 0 0 2px var(--warning); }
+.chip.tripped { box-shadow: inset 0 0 0 2px var(--critical); }
+.countdown { margin-top: 10px; font-size: 13px; color: var(--ink-2); min-height: 18px; }
+
+/* riders */
+h2 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: var(--ink-2); }
+.riders { grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); }
+@media (max-width: 1300px) { .riders { grid-template-columns: repeat(var(--half, 4), minmax(0, 1fr)); } }
+@media (max-width: 700px) { .riders { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rider .top { display: flex; align-items: baseline; justify-content: space-between; }
+.rider .name { color: var(--ink-2); font-size: 13px; }
+.badge {
+  font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  background: var(--gen); color: #fff; visibility: hidden;
+}
+.rider.leader .badge { visibility: visible; }
+.rider .value { font-size: 36px; }
+.bar { height: 10px; border-radius: 5px; background: var(--gen-track); margin: 10px 0 8px; overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 0 5px 5px 0; background: var(--gen); }
+.ready .bar .fill { transition: width .4s; }
+.rider.idle .value { color: var(--muted); }
+
+/* chart */
+.chart-card { padding-bottom: 8px; }
+.chart-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.chart-head h2 { margin: 0; }
+.legend { display: flex; gap: 14px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.chart-wrap { position: relative; }
+#chart { width: 100%; height: 260px; display: block; }
+#chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+#chart .end-label { fill: var(--ink-2); font-size: 12px; }
+.tooltip {
+  position: absolute; pointer-events: none; display: none;
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0,0,0,.18), inset 0 0 0 1px var(--ring);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tooltip .row { display: flex; align-items: center; gap: 6px; }
+.tooltip .row b { margin-left: auto; padding-left: 12px; }
+
+footer { margin-top: 20px; color: var(--muted); font-size: 12px; display: flex; gap: 18px; flex-wrap: wrap; }
+footer a { color: var(--ink-2); }
+.stale { opacity: .45; transition: opacity .3s; }
+</style>
+</head>
+<body>
+<header>
+  <h1>KinoBox <span>pedal power</span></h1>
+  <div class="pill" id="conn"><span class="dot"></span><span id="conn-text">Connecting…</span></div>
+  <div class="spacer"></div>
+  <div class="meta" id="since"></div>
+  <button class="theme" id="theme" type="button" aria-label="Toggle colour theme">Theme</button>
+</header>
+
+<main id="main">
+  <section class="grid hero">
+    <div class="card">
+      <div class="label"><span class="key" style="background:var(--gen)"></span>Generated now</div>
+      <div class="value"><span id="gen">–</span><small>W</small></div>
+      <div class="sub" id="gen-sub">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="key" style="background:var(--load)"></span>Consumed now</div>
+      <div class="value"><span id="load">–</span><small>W</small></div>
+      <div class="sub" id="load-sub">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label">Balance</div>
+      <div class="value"><span id="net">–</span><small>W</small></div>
+      <div class="diverge" aria-hidden="true"><div class="fill" id="net-fill"></div><div class="mid"></div></div>
+      <div class="sub" id="net-sub">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label">Energy generated</div>
+      <div class="value"><span id="egen">–</span><small id="egen-unit">Wh</small></div>
+      <div class="sub" id="egen-sub">&nbsp;</div>
+    </div>
+  </section>
+
+  <section class="grid system">
+    <div class="card">
+      <div class="label">Battery</div>
+      <div class="value"><span id="volt">–</span><small>V</small></div>
+      <div class="meter" aria-hidden="true"><div class="fill" id="volt-fill"></div></div>
+      <div class="scale" id="volt-scale"></div>
+    </div>
+    <div class="card">
+      <div class="label">Temperature</div>
+      <div class="value"><span id="temp">–</span><small>°C</small></div>
+      <div class="sub" id="temp-sub">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label">Protection</div>
+      <div class="chips" id="chips"></div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+  </section>
+
+  <h2>Riders</h2>
+  <section class="grid riders" id="riders"></section>
+
+  <section class="card chart-card">
+    <div class="chart-head">
+      <h2>Power (W), last 5 minutes</h2>
+      <div class="legend">
+        <span><i style="background:var(--gen)"></i>Generated</span>
+        <span><i style="background:var(--load)"></i>Consumed</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" role="img" aria-label="Generated and consumed power over the last five minutes"></svg>
+      <div class="tooltip" id="tip"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="stats"></span>
+  <span class="spacer"></span>
+  <a href="/api/readings">JSON</a>
+  <a href="/metrics">Metrics</a>
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const HISTORY_MS = 5 * 60 * 1000;
+const history = []; // {t, gen, load}
+let config = null;
+
+// ---------- theme toggle (remembered per browser) ----------
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+$("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark"
+                                  : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+  drawChart();
+});
+
+// ---------- formatting ----------
+const fmt0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+const fmt1 = new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmt2 = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function energy(j) {
+  const wh = j / 3600;
+  if (wh < 1000) return [wh < 10 ? fmt1.format(wh) : fmt0.format(wh), "Wh"];
+  return [fmt2.format(wh / 1000), "kWh"];
+}
+function energyText(j) { const [v, u] = energy(j); return v + " " + u; }
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// ---------- static parts built once ----------
+const PROTECTIONS = [
+  ["low_voltage", "Low voltage"],
+  ["high_voltage", "High voltage"],
+  ["high_temperature", "Temperature"],
+  ["high_current", "Current"],
+];
+const ICONS = {
+  ok: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--good)"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warning: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="var(--warning)"/><path d="M8 6v3.6" stroke="#0b0b0b" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11.8" r="1" fill="#0b0b0b"/></svg>',
+  tripped: '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--critical)"/><path d="M5.5 5.5l5 5m0-5-5 5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+};
+const STATE_TEXT = { ok: "OK", warning: "Warning", tripped: "Tripped" };
+
+function buildChips() {
+  $("chips").innerHTML = PROTECTIONS.map(([k, name]) =>
+    `<div class="chip" id="chip-${k}"><span class="icon"></span>${name}<b>–</b></div>`).join("");
+}
+
+let riderCount = 0;
+function buildRiders(n) {
+  riderCount = n;
+  $("riders").style.setProperty("--n", n);
+  $("riders").style.setProperty("--half", Math.ceil(n / 2));
+  let html = "";
+  for (let i = 1; i <= n; i++) {
+    html += `<div class="card rider" id="rider-${i}">
+      <div class="top"><span class="name">Rider ${i}</span><span class="badge">Top</span></div>
+      <div class="value"><span class="w">–</span><small>W</small></div>
+      <div class="bar"><div class="fill" style="width:0"></div></div>
+      <div class="sub"><span class="e">–</span> · <span class="a">–</span> A</div>
+    </div>`;
+  }
+  $("riders").innerHTML = html;
+}
+
+// battery scale: 10 V … 16 V with the warning/trip marks
+const VMIN = 10, VMAX = 16;
+const vpos = v => Math.min(100, Math.max(0, (v - VMIN) / (VMAX - VMIN) * 100));
+function buildVoltScale(c) {
+  const marks = [VMIN, c.volt_trip_low, c.volt_warn_low, c.volt_warn_high, c.volt_trip_high, VMAX];
+  $("volt-scale").innerHTML = marks.map(v => `<span style="left:${vpos(v)}%">${v}</span>`).join("");
+  const meter = document.querySelector(".meter");
+  for (const v of marks.slice(1, -1)) {
+    const t = document.createElement("div");
+    t.className = "tick"; t.style.left = `calc(${vpos(v)}% - 1px)`;
+    meter.appendChild(t);
+  }
+}
+
+// ---------- update ----------
+function update(d) {
+  if (!config) { config = d.config; buildVoltScale(config); buildChips(); }
+  const r = d.reading;
+
+  $("conn").className = "pill " + (d.online ? "live" : "offline");
+  $("conn-text").textContent = d.online ? `Live · ${d.source}` : `Offline · ${d.source || "no source"}`;
+  $("main").classList.toggle("stale", !d.online);
+  $("since").textContent = "Totals since " + new Date(d.since).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+
+  const [ev, eu] = energy(d.generated_energy_j);
+  $("egen").textContent = ev; $("egen-unit").textContent = eu;
+  $("egen-sub").textContent = "Consumed " + energyText(d.consumed_energy_j);
+
+  const age = d.last_reading && !d.last_reading.startsWith("0001") ? (Date.now() - Date.parse(d.last_reading)) / 1000 : null;
+  const extra = Object.entries(d.backend_counters || {}).map(([k, v]) => ` · ${fmt0.format(v)} ${k.replaceAll("_", " ")}`).join("");
+  $("stats").textContent = `${fmt0.format(d.readings)} readings${extra} · ${d.restarts} restarts` +
+    (age !== null ? ` · last reading ${fmt1.format(Math.max(0, age))} s ago` : "");
+
+  if (!r) return;
+  if (r.riders.length !== riderCount) buildRiders(r.riders.length);
+
+  $("gen").textContent = fmt0.format(r.generated_power_w);
+  const active = r.riders.filter(x => x.power_w >= 5).length;
+  $("gen-sub").textContent = `${active} of ${r.riders.length} riders pedalling`;
+  $("load").textContent = fmt0.format(r.load_power_w);
+  $("load-sub").textContent = fmt1.format(r.load_current_a) + " A drawn";
+
+  const net = r.generated_power_w - r.load_power_w;
+  $("net").textContent = (net > 0 ? "+" : net < 0 ? "−" : "") + fmt0.format(Math.abs(net));
+  $("net-sub").textContent = net >= 0 ? "Riders cover the load – battery charging" : "Battery covers the difference";
+  const span = Math.max(r.generated_power_w, r.load_power_w, 1);
+  const half = Math.min(Math.abs(net) / span, 1) * 50;
+  const nf = $("net-fill");
+  nf.style.background = net >= 0 ? "var(--gen)" : "var(--deficit)";
+  nf.style.left = net >= 0 ? "50%" : (50 - half) + "%";
+  nf.style.width = half + "%";
+
+  $("volt").textContent = fmt2.format(r.voltage_v);
+  const vs = r.voltage_v <= config.volt_trip_low || r.voltage_v >= config.volt_trip_high ? "critical"
+           : r.voltage_v <= config.volt_warn_low || r.voltage_v >= config.volt_warn_high ? "warning" : "good";
+  const vf = $("volt-fill");
+  vf.style.width = vpos(r.voltage_v) + "%";
+  vf.style.background = `var(--${vs})`;
+
+  $("temp").textContent = fmt1.format(r.temperature_c);
+  $("temp-sub").textContent = r.status.high_temperature === "ok" ? "Within limits" : "Check ventilation";
+
+  for (const [k] of PROTECTIONS) {
+    const st = r.status[k];
+    const el = $("chip-" + k);
+    el.className = "chip " + st;
+    el.querySelector(".icon").innerHTML = ICONS[st] || ICONS.ok;
+    el.querySelector("b").textContent = STATE_TEXT[st] || st;
+  }
+  $("countdown").textContent = r.status.countdown_s > 0 ? `Restart in ${r.status.countdown_s} s` : "";
+
+  let leader = -1, best = 5;
+  r.riders.forEach((x, i) => { if (x.power_w > best) { best = x.power_w; leader = i; } });
+  r.riders.forEach((x, i) => {
+    const el = $("rider-" + x.position);
+    el.classList.toggle("leader", i === leader);
+    el.classList.toggle("idle", x.power_w < 5);
+    el.querySelector(".w").textContent = fmt0.format(x.power_w);
+    el.querySelector(".fill").style.width = Math.min(100, x.power_w / config.rider_max_w * 100) + "%";
+    el.querySelector(".e").textContent = energyText(d.rider_energy_j[i] || 0);
+    el.querySelector(".a").textContent = fmt1.format(x.current_a);
+  });
+
+  const t = Date.parse(d.last_reading);
+  if (d.online && (!history.length || t > history[history.length - 1].t)) {
+    history.push({ t, gen: r.generated_power_w, load: r.load_power_w });
+  }
+  while (history.length && history[0].t < Date.now() - HISTORY_MS) history.shift();
+  drawChart();
+  requestAnimationFrame(() => document.body.classList.add("ready"));
+}
+
+// ---------- chart ----------
+const svg = $("chart"), tip = $("tip");
+const M = { l: 44, r: 92, t: 12, b: 24 };
+let geom = null;
+
+function niceMax(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+
+function drawChart() {
+  const W = svg.clientWidth, H = svg.clientHeight;
+  if (!W) return;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const now = Date.now(), t0 = now - HISTORY_MS;
+  const ymax = niceMax(Math.max(100, ...history.map(p => Math.max(p.gen, p.load))) * 1.05);
+  const x = t => M.l + (t - t0) / HISTORY_MS * (W - M.l - M.r);
+  const y = v => H - M.b - v / ymax * (H - M.t - M.b);
+  geom = { x, y, t0, W, H };
+
+  let s = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = ymax * i / 4, yy = y(v);
+    s += `<line x1="${M.l}" x2="${W - M.r}" y1="${yy}" y2="${yy}" stroke="${i ? css("--grid") : css("--axis")}" stroke-width="1"/>`;
+    s += `<text x="${M.l - 8}" y="${yy + 4}" text-anchor="end">${fmt0.format(v)}</text>`;
+  }
+  const minStep = (x(now) - x(now - 60000)) < 56 ? 2 : 1; // keep labels apart on narrow screens
+  for (let m = 0; m <= 5; m += minStep) {
+    const xx = x(now - m * 60000);
+    s += `<text x="${xx}" y="${H - 6}" text-anchor="middle">${m ? "−" + m + " min" : "now"}</text>`;
+  }
+
+  if (history.length > 1) {
+    for (const [key, color] of [["load", css("--load")], ["gen", css("--gen")]]) {
+      const pts = history.map(p => `${x(p.t).toFixed(1)},${y(p[key]).toFixed(1)}`);
+      const first = history[0], last = history[history.length - 1];
+      s += `<path d="M${x(first.t)},${y(0)}L${pts.join("L")}L${x(last.t)},${y(0)}Z" fill="${color}" opacity="0.10"/>`;
+      s += `<polyline points="${pts.join(" ")}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    // end markers + direct labels, nudged apart only if they would collide
+    const last = history[history.length - 1];
+    let yg = y(last.gen), yl = y(last.load);
+    const lg = yg, ll = yl;
+    if (Math.abs(yg - yl) < 16) { const mid = (yg + yl) / 2, up = yg <= yl ? -1 : 1; yg = mid + up * 8; yl = mid - up * 8; }
+    for (const [vy, ly, color, label] of [[lg, yg, css("--gen"), "Generated"], [ll, yl, css("--load"), "Consumed"]]) {
+      const xx = x(last.t);
+      if (Math.abs(vy - ly) > 1) s += `<line x1="${xx + 6}" x2="${xx + 12}" y1="${vy}" y2="${ly}" stroke="${css("--axis")}"/>`;
+      s += `<circle cx="${xx}" cy="${vy}" r="4" fill="${color}" stroke="${css("--surface")}" stroke-width="2"/>`;
+      s += `<text class="end-label" x="${xx + 14}" y="${ly + 4}">${label}</text>`;
+    }
+  }
+  s += `<g id="hover" style="display:none"><line id="hline" y1="${M.t}" y2="${H - M.b}" stroke="${css("--axis")}"/>` +
+       `<circle id="hgen" r="4" fill="${css("--gen")}" stroke="${css("--surface")}" stroke-width="2"/>` +
+       `<circle id="hload" r="4" fill="${css("--load")}" stroke="${css("--surface")}" stroke-width="2"/></g>`;
+  svg.innerHTML = s;
+  showHover();
+}
+
+let hoverX = null;
+function showHover() {
+  if (hoverX === null || !geom || history.length < 2) return;
+  const rect = svg.getBoundingClientRect();
+  const t = geom.t0 + (hoverX - M.l) / (geom.W - M.l - M.r) * HISTORY_MS;
+  let best = history[0];
+  for (const p of history) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+  const xx = geom.x(best.t);
+  svg.querySelector("#hover").style.display = "";
+  const hl = svg.querySelector("#hline");
+  hl.setAttribute("x1", xx); hl.setAttribute("x2", xx);
+  svg.querySelector("#hgen").setAttribute("cx", xx); svg.querySelector("#hgen").setAttribute("cy", geom.y(best.gen));
+  svg.querySelector("#hload").setAttribute("cx", xx); svg.querySelector("#hload").setAttribute("cy", geom.y(best.load));
+  tip.innerHTML = `<div>${new Date(best.t).toLocaleTimeString()}</div>` +
+    `<div class="row"><span class="key" style="background:var(--gen)"></span>Generated<b>${fmt0.format(best.gen)} W</b></div>` +
+    `<div class="row"><span class="key" style="background:var(--load)"></span>Consumed<b>${fmt0.format(best.load)} W</b></div>`;
+  tip.style.display = "block";
+  // right of the cursor, flipped left near the edge
+  const w = tip.offsetWidth;
+  tip.style.left = (xx + 12 + w > rect.width ? xx - 12 - w : xx + 12) + "px";
+  tip.style.top = M.t + "px";
+}
+svg.addEventListener("pointermove", ev => { hoverX = ev.clientX - svg.getBoundingClientRect().left; showHover(); });
+svg.addEventListener("pointerleave", () => {
+  hoverX = null;
+  tip.style.display = "none";
+  const g = svg.querySelector("#hover"); if (g) g.style.display = "none";
+});
+addEventListener("resize", drawChart);
+
+// ---------- polling ----------
+async function poll() {
+  try {
+    const res = await fetch("/api/readings", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    update(await res.json());
+  } catch {
+    $("conn").className = "pill offline";
+    $("conn-text").textContent = "Server unreachable";
+    $("main").classList.add("stale");
+  }
+  setTimeout(poll, 500);
+}
+poll();
+// Backfill the chart with what the server saw before this page was opened.
+fetch("/api/history", { cache: "no-store" })
+  .then(r => r.ok ? r.json() : [])
+  .then(h => {
+    const first = history.length ? history[0].t : Infinity;
+    history.unshift(...(h || []).filter(p => p.t < first));
+    drawChart();
+  })
+  .catch(() => {});
+</script>
+</body>
+</html>

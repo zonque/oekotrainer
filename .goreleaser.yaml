@@ -1,0 +1,75 @@
+# Release builds for kinobox (server) and kinobox-overlay.
+# Run by .github/workflows/release.yml on v* tags; try locally with
+#   goreleaser release --snapshot --clean
+version: 2
+
+project_name: kinobox
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: kinobox
+    main: ./cmd/kinobox
+    binary: kinobox
+    env: [CGO_ENABLED=0]
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+  - id: kinobox-overlay
+    main: ./cmd/kinobox-overlay
+    binary: kinobox-overlay
+    # Ebitengine loads the graphics libraries at runtime, so no cgo is needed
+    # on any platform.
+    env: [CGO_ENABLED=0]
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+      # no console window when started from Explorer
+      - '{{ if eq .Os "windows" }}-H=windowsgui{{ end }}'
+
+# one binary for Intel and Apple Silicon Macs
+universal_binaries:
+  - id: kinobox
+    ids: [kinobox]
+    name_template: kinobox
+    replace: true
+  - id: kinobox-overlay
+    ids: [kinobox-overlay]
+    name_template: kinobox-overlay
+    replace: true
+
+archives:
+  - id: default
+    ids: [kinobox, kinobox-overlay]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "all" }}universal{{ else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - kinobox.example.toml
+      - docs/PROTOCOL.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+
+release:
+  draft: false
+  prerelease: auto

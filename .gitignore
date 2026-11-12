@@ -1,0 +1,5 @@
+/kinobox
+/kinobox-overlay
+/kinobox.toml
+/dist/
+*.exe

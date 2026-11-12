@@ -1,0 +1,70 @@
+# KinoBox dashboard configuration, shared by `kinobox` (server) and
+# `kinobox-overlay`. Copy to kinobox.toml and adjust. Every key is optional;
+# the values shown are the defaults, except for kinobox.device.
+
+# Data source: "kinobox" (serial KinoBox) or "simulator" (synthetic data).
+# Leave unset to use the KinoBox if kinobox.device is set, the simulator
+# otherwise.
+#backend = "kinobox"
+
+# Address the HTTP server listens on (dashboard, /api/readings, /metrics).
+listen = ":8080"
+
+# Number of riders / trainers in use.
+riders = 8
+
+# Show the source as offline if no reading arrived for this long.
+offline_after = "3s"
+
+[kinobox]
+# Serial device the KinoBox is attached to.
+device = "/dev/ttyUSB0"
+
+# Reopen the device if no valid frame arrived for this long.
+stale_timeout = "3s"
+
+# Conversion of the box's ADC readings to physical units. Only change these
+# if your KinoBox hardware differs from the standard one. On the 8-rider box
+# the 5th input slot is unused and skipped automatically.
+adc_bits   = 10      # ADC resolution
+max_v      = 20.0    # battery voltage at ADC full scale (V)
+batt_max_a = 150.0   # load current at ADC full scale (A)
+user_max_a = 50.0    # generator current per input at ADC full scale (A)
+
+[simulator]
+period = "500ms"     # time between generated readings
+
+[dashboard]
+rider_max_w = 150.0  # full scale of the per-rider power bars (W)
+
+# Battery voltage levels used to colour the battery meter (V).
+volt_trip_low  = 11.0
+volt_warn_low  = 11.5
+volt_warn_high = 14.0
+volt_trip_high = 15.0
+
+# Status strip shown on top of a video player (kinobox-overlay).
+[overlay]
+server        = "http://localhost:8080"  # kinobox server to read from
+poll_interval = "500ms"
+position      = "top"     # "top" or "bottom" edge of the screen
+height        = 56        # strip height in device-independent pixels
+monitor       = 0         # monitor index; the overlay logs the available ones
+click_through = true      # pass mouse clicks to the window below
+show_totals   = true      # generated/consumed power and battery on the right
+show_energy   = true      # energy per rider next to the power
+#font         = "/usr/share/fonts/..."   # TrueType/OpenType font, default Go Sans
+font_scale    = 1.0       # text size relative to the strip height
+
+# Colours as "#rrggbb" or "#rrggbbaa" (alpha 00 = transparent, ff = opaque).
+[overlay.colors]
+background = "#0d0d0dc0"
+segment    = "#ffffff0d"  # background of each rider's segment
+text       = "#f0efec"
+text_muted = "#a9a8a0"
+bar        = "#3987e5"    # rider power bar
+bar_track  = "#3987e533"  # unfilled part of the power bar
+leader     = "#fab219"    # marks the strongest rider
+good       = "#0ca30c"
+warning    = "#fab219"
+critical   = "#e34948"
